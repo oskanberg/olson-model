@@ -1,6 +1,7 @@
 package main
 
 import (
+	urand "crypto/rand"
 	"fmt"
 	"index/suffixarray"
 	"math/rand"
@@ -15,16 +16,28 @@ func DeserialiseGenome(genome []byte) *PLGMN {
 
 	// add each gate
 	for _, start := range genomeStarts {
-		mn.NewPLGFromGenome(genome, start)
+		mn.NewGateFromGenome(genome, start)
 	}
 
 	return mn
 }
 
+func GenerateRandomGenome(length int, artificialStartCodons int) []byte {
+	genome := make([]byte, length)
+	urand.Read(genome)
+	for i := 0; i < artificialStartCodons; i++ {
+		position := rand.Intn(length)
+		genome[position] = 42
+		genome[(position+1)%length] = 213
+	}
+	return genome
+}
+
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
-	genome := []byte{250, 100, 4, 163, 42, 213, 7, 4, 2, 42, 213, 163, 95}
+	genome := GenerateRandomGenome(32, 1)
 	plgmn := DeserialiseGenome(genome)
 	fmt.Print(plgmn.ToString())
-	plgmn.Run([]bool{false, true, true, true, true, true, true, true, true, true, true, true, true})
+	actuators := plgmn.Run([]bool{false, true, true, true, true, true, true, true, true, true, true, true, true})
+	fmt.Println(actuators)
 }

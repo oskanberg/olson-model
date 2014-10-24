@@ -37,7 +37,7 @@ func (s *PLGMN) stepAllNodes() {
 
 func (s *PLGMN) getActuators() []bool {
 	actuatorVals := make([]bool, NumActuators)
-	end := len(s.nodes) - 1
+	end := len(s.nodes)
 	for i, v := range s.nodes[end-NumActuators : end] {
 		actuatorVals[i] = v.GetState()
 	}
@@ -61,7 +61,7 @@ func (s *PLGMN) ToString() string {
 	return str
 }
 
-func (s *PLGMN) NewPLGFromGenome(genome []byte, startPosition int) {
+func (s *PLGMN) NewGateFromGenome(genome []byte, startPosition int) {
 
 	plg := NewPLG()
 
@@ -111,15 +111,24 @@ func (s *PLGMN) NewPLGFromGenome(genome []byte, startPosition int) {
 
 	// read the probabilities for transition table
 	// unfortunately can't do all at once since genome wraps
-	numProbabilities := int(math.Pow(2, float64(numberIn+numberOut)))
-	end := read + numProbabilities
-	if end > genomeLen {
-		plg.transitionTable = append(plg.transitionTable, genomeFloat64[read:genomeLen]...)
-		plg.transitionTable = append(plg.transitionTable, genomeFloat64[0:end-genomeLen]...)
-	} else {
-		plg.transitionTable = append(plg.transitionTable, genomeFloat64[read:end]...)
+	leftToRead := int(math.Pow(2, float64(numberIn+numberOut)))
+	// while the remainder wraps
+	for read+leftToRead+1 > genomeLen {
+		// read to end of genome
+		plg.transitionTable = append(plg.transitionTable, genomeFloat64[read:]...)
+		// subtract
+		leftToRead -= genomeLen - read
+		read = 0
 	}
-	plg.NormaliseTransitionTable(numberIn, numberOut)
+
+	plg.transitionTable = append(plg.transitionTable, genomeFloat64[read:read+leftToRead]...)
+
+	fmt.Println("********************")
+	fmt.Println(plg.transitionTable)
+	fmt.Println(genome)
+	fmt.Println("********************")
+
+	plg.NormaliseTransitionTable()
 	s.AddGate(plg)
 }
 

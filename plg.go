@@ -51,13 +51,13 @@ func (s *PLG) Run() {
 
 }
 
-func (s *PLG) NormaliseTransitionTable(numberIn int, numberOut int) {
+func (s *PLG) NormaliseTransitionTable() {
 	rowLength := int(math.Pow(2, float64(len(s.out))))
 
 	// for each row
-	for i, rows := float64(0), math.Pow(2, float64(numberIn)); i < rows; i++ {
+	for i, rows := float64(0), math.Pow(2, float64(len(s.in))); i < rows; i++ {
 		index := int(i) * rowLength
-		row := s.transitionTable[index : index+int(math.Pow(2, float64(numberOut)))]
+		row := s.transitionTable[index : index+rowLength]
 		var rowTotal float64 = 0
 		for _, val := range row {
 			rowTotal += (val + 1)
@@ -78,15 +78,19 @@ func (s *PLG) ToString() string {
 		str += fmt.Sprintf("out node %d\n", node.GetId())
 	}
 
-	numberIn := len(s.in)
-	numberOut := len(s.out)
+	rowLen := int(math.Pow(2, float64(len(s.in))))
+	numRows := int(math.Pow(2, float64(len(s.out))))
+
 	str += "table:\n"
 	// for each row
-	for i, rows := float64(0), math.Pow(2, float64(numberIn)); i < rows; i++ {
-		index := int(i) * numberIn
-		row := s.transitionTable[index : index+int(math.Pow(2, float64(numberOut)))]
+	for i := 0; i < numRows; i++ {
+		row := s.transitionTable[i*rowLen : (i+1)*rowLen]
 		str += fmt.Sprintln(row)
 	}
+
+	str += "\n"
+	str += fmt.Sprintln(s.transitionTable)
+	str += "\n"
 	return str
 }
 
