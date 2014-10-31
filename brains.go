@@ -35,9 +35,9 @@ func GenerateRandomGenome(length int, artificialStartCodons int) []byte {
 
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
-	genome := GenerateRandomGenome(32, 1)
+	genome := GenerateRandomGenome(32, 5)
 	plgmn := DeserialiseGenome(genome)
-	fmt.Print(plgmn.ToString())
+	// fmt.Print(plgmn.ToString())
 	actuators := plgmn.Run([]bool{false, true, true, true, true, true, true, true, true, true, true, true, true})
 	fmt.Println(actuators)
 }

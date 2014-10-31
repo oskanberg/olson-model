@@ -28,6 +28,9 @@ func (s *PLG) Run() {
 		inputState = inputState | Booltobyte(s.in[i].GetState())
 	}
 
+	fmt.Println("input state")
+	fmt.Println(inputState)
+
 	rowLength := byte(math.Pow(2, float64(len(s.out))))
 	start := inputState * rowLength
 	row := s.transitionTable[start : start+rowLength]
@@ -42,28 +45,38 @@ func (s *PLG) Run() {
 		total += row[index]
 	}
 
+	fmt.Println("out state")
+	fmt.Println(index)
+
 	// index now represents outnodes in binary
 	for i, _ := range s.out {
 		// if lsb is 1, set state true
-		s.out[i].SetState(index&1 == 1)
+		if index&1 == 1 {
+			fmt.Println("writing true to ", s.out[i].GetId())
+			s.out[i].SetState(true)
+		} else {
+			s.out[i].SetState(false)
+		}
 		index = index >> 1
 	}
 
 }
 
 func (s *PLG) NormaliseTransitionTable() {
+	// row length = num output conditions = 2 ^ num outnodes
 	rowLength := int(math.Pow(2, float64(len(s.out))))
+	numRows := len(s.transitionTable) / rowLength
 
 	// for each row
-	for i, rows := float64(0), math.Pow(2, float64(len(s.in))); i < rows; i++ {
-		index := int(i) * rowLength
+	for i := 0; i < numRows; i++ {
+		index := i * rowLength
 		row := s.transitionTable[index : index+rowLength]
 		var rowTotal float64 = 0
 		for _, val := range row {
-			rowTotal += (val + 1)
+			rowTotal += val
 		}
 		for i, val := range row {
-			row[i] = float64((val + 1) / (rowTotal))
+			row[i] = float64((val) / (rowTotal))
 		}
 	}
 }
@@ -78,8 +91,8 @@ func (s *PLG) ToString() string {
 		str += fmt.Sprintf("out node %d\n", node.GetId())
 	}
 
-	rowLen := int(math.Pow(2, float64(len(s.in))))
-	numRows := int(math.Pow(2, float64(len(s.out))))
+	rowLen := int(math.Pow(2, float64(len(s.out))))
+	numRows := int(math.Pow(2, float64(len(s.in))))
 
 	str += "table:\n"
 	// for each row

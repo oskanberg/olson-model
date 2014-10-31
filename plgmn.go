@@ -122,12 +122,6 @@ func (s *PLGMN) NewGateFromGenome(genome []byte, startPosition int) {
 	}
 
 	plg.transitionTable = append(plg.transitionTable, genomeFloat64[read:read+leftToRead]...)
-
-	fmt.Println("********************")
-	fmt.Println(plg.transitionTable)
-	fmt.Println(genome)
-	fmt.Println("********************")
-
 	plg.NormaliseTransitionTable()
 	s.AddGate(plg)
 }

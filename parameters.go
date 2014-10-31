@@ -7,7 +7,7 @@ const MinimumOutNodes = 2
 const MinimumInNodes = 1
 
 const NumRetinaSlices = 12
-const NumActuators = 2
+const NumActuators = 24
 const NumHiddenNodes = 6
 
 //                    two layers øf retina in prey

@@ -11,7 +11,9 @@ func (s *Node) GetState() bool {
 }
 
 func (s *Node) SetState(state bool) {
-	s.tNext = state
+	if !s.tNext {
+		s.tNext = state
+	}
 }
 
 func (s *Node) Step() {
