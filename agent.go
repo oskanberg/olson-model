@@ -24,8 +24,12 @@ type Prey struct {
 	posN  *Position
 }
 
-func (s *Prey) SetPosition(pos Position) {
-	s.pos = &pos
+func (s *Prey) SetLocation(loc *Vector2D) {
+	s.pos.location = *loc
+}
+
+func (s *Prey) SetDirection(direction *Vector2D) {
+	s.pos.location = *direction
 }
 
 func (s *Prey) GetLocation() *Vector2D {
@@ -51,23 +55,63 @@ func (s *Prey) SetRandomPosition(maxWidth, maxHeight int) {
 	s.SetPosition(newPos)
 }
 
-func (s *Prey) canSee(target Agent) bool {
+func (s *Prey) canSee(target Agent) (canSee bool, angle float64) {
 	differenceVector := s.GetLocation().Subtract(target.GetLocation())
 	if differenceVector.Magnitude() > 100 {
 		// too far away
-		return false
+		return false, 0
 	}
 	dotProduct := s.GetDirection().Dot(differenceVector.Normalised())
 	if dotProduct > AgentViewAngle {
-		return true
+		return true, dotProduct
 	}
-	return false
+	return false, 0
 }
 
-func (s *Prey) Run() {
-	// read into sensors
-	// run plgmn
+func (s *Prey) updatePosition(actuators []bool) {
+	action := byte(0)
+	for _, v := range actuators {
+		action = action << 1
+		if v {
+			action = action & 1
+		}
+	}
+	switch action {
+	case 0:
+		// do nothing
+	case 1:
+		// turn right
+		s.GetDirection().Rotate(PreyTurnAmountRadians)
+	case 2:
+		// turn left
+		s.GetDirection().Rotate(-PreyTurnAmountRadians)
+	case 3:
+		// move straight ahead
+		// TODO: implement variable speed
+		newPos := s.GetLocation().Add(s.GetDirection())
+		s.SetPosition(newPos)
+	}
+}
+
+func (s *Prey) Run(w *World) {
+	sensorValues := make([]bool, NumRetinaSlices*2)
+	// read into first sensors (prey)
+	for _, agent := range w.prey {
+		if b, a := s.canSee(agent); b {
+			sliceIndex := int(a / RetinaSliceWidthRadians)
+			sensorValues[sliceIndex] = true
+		}
+	}
+	// read into second set of sensors (predators)
+	for _, agent := range w.predators {
+		if b, a := s.canSee(agent); b {
+			sliceIndex := int(a/RetinaSliceWidthRadians) + NumRetinaSlices
+			sensorValues[sliceIndex] = true
+		}
+	}
+	actuators := s.brain.Run(sensorValues)
 	// update position
+	s.updatePosition(actuators)
 }
 
 func (s *Prey) Step() {

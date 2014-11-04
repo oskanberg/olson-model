@@ -25,6 +25,18 @@ func (s *Vector2D) Subtract(v *Vector2D) *Vector2D {
 	}
 }
 
+func (s *Vector2D) Add(v *Vector2D) *Vector2D {
+	return &Vector2D{
+		x: s.x + v.x,
+		y: s.y + v.y,
+	}
+}
+
 func (s *Vector2D) Dot(v *Vector2D) float64 {
 	return (s.x * v.x) + (s.y * v.y)
+}
+
+func (s *Vector2D) Rotate(radians float64) {
+	s.x = (s.x * math.Cos(radians)) - (s.y * math.Sin(radians))
+	s.y = (s.x * math.Sin(radians)) + (s.y * math.Cos(radians))
 }
