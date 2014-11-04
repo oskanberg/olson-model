@@ -22,6 +22,7 @@ func DeserialiseGenome(genome []byte) *PLGMN {
 	return mn
 }
 
+// Note: this is not guaranteed to create exact number of codons (due to overlap)
 func GenerateRandomGenome(length int, artificialStartCodons int) []byte {
 	genome := make([]byte, length)
 	urand.Read(genome)
