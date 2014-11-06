@@ -1,9 +1,6 @@
 package main
 
-import (
-	"fmt"
-	"testing"
-)
+import "testing"
 
 func TestNewGateFromGenome(t *testing.T) {
 	//                       in out in in in inoutoutoutout p1 p2 p3    p4 p5 p6 p7 p8
@@ -17,5 +14,5 @@ func TestNewGateFromGenome(t *testing.T) {
 	if len(newGate.out) != MinimumOutNodes {
 		t.Error("Generated gate does not have correct number of output nodes")
 	}
-	fmt.Println(newGate.ToString())
+	// fmt.Println(newGate.ToString())
 }

@@ -66,7 +66,7 @@ func (s *PLGMN) NewGateFromGenome(genome []byte, startPosition int) {
 	plg := NewPLG()
 
 	genomeLen := len(genome)
-	numNodes := len(s.nodes)
+	numNodes := byte(len(s.nodes))
 
 	// skip the start codon
 	read := (startPosition + 2) % genomeLen
@@ -88,7 +88,8 @@ func (s *PLGMN) NewGateFromGenome(genome []byte, startPosition int) {
 	// next numberIn bytes are ids of input nodes
 	for i := 0; i < numberIn; i++ {
 		iterRead := (read + i) % genomeLen
-		nodeIndex := RoundInt((int(genome[iterRead]) * numNodes) / 255)
+		//TODO: original division
+		nodeIndex := genome[iterRead] % numNodes
 		plg.AddInNode(&s.nodes[nodeIndex])
 	}
 	// there will always be MaximumInNodes spaces, if not vals
@@ -97,7 +98,8 @@ func (s *PLGMN) NewGateFromGenome(genome []byte, startPosition int) {
 	// next numberOut bytes are ids of out nodes
 	for i := 0; i < numberOut; i++ {
 		iterRead := (read + i) % genomeLen
-		nodeIndex := RoundInt((int(genome[iterRead]) * numNodes) / 255)
+		//TODO: original division
+		nodeIndex := genome[iterRead] % numNodes
 		plg.AddOutNode(&s.nodes[nodeIndex])
 	}
 	// there will always be MaximumOutNodes spaces, if not vals

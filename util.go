@@ -6,12 +6,11 @@ func FloorByte(in byte) int {
 	return int(math.Floor(float64(in)))
 }
 
-func RoundInt(in int) int {
-	floatIn := float64(in)
+func RoundInt(in float64) int {
 	if in > 0 {
-		return int(floatIn + 0.5)
+		return int(in + 0.5)
 	} else {
-		return int(floatIn - 0.5)
+		return int(in - 0.5)
 	}
 }
 

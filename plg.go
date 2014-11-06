@@ -28,11 +28,11 @@ func (s *PLG) Run() {
 		inputState = inputState | Booltobyte(s.in[i].GetState())
 	}
 
-	fmt.Println("input state")
-	fmt.Println(inputState)
+	// fmt.Println("input state")
+	// fmt.Println(inputState)
 
-	rowLength := byte(math.Pow(2, float64(len(s.out))))
-	start := inputState * rowLength
+	rowLength := int(math.Pow(2, float64(len(s.out))))
+	start := int(inputState) * rowLength
 	row := s.transitionTable[start : start+rowLength]
 
 	point := rand.Float64()
@@ -45,14 +45,14 @@ func (s *PLG) Run() {
 		total += row[index]
 	}
 
-	fmt.Println("out state")
-	fmt.Println(index)
+	// fmt.Println("out state")
+	// fmt.Println(index)
 
 	// index now represents outnodes in binary
 	for i, _ := range s.out {
 		// if lsb is 1, set state true
 		if index&1 == 1 {
-			fmt.Println("writing true to ", s.out[i].GetId())
+			// fmt.Println("writing true to ", s.out[i].GetId())
 			s.out[i].SetState(true)
 		} else {
 			s.out[i].SetState(false)

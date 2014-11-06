@@ -36,7 +36,18 @@ func (s *Vector2D) Dot(v *Vector2D) float64 {
 	return (s.x * v.x) + (s.y * v.y)
 }
 
-func (s *Vector2D) Rotate(radians float64) {
-	s.x = (s.x * math.Cos(radians)) - (s.y * math.Sin(radians))
-	s.y = (s.x * math.Sin(radians)) + (s.y * math.Cos(radians))
+func (s *Vector2D) Rotated(radians float64) *Vector2D {
+	cr := math.Cos(radians)
+	sr := math.Sin(radians)
+	return &Vector2D{
+		x: (s.x * cr) - (s.y * sr),
+		y: (s.x * sr) + (s.y * cr),
+	}
+}
+
+func (s *Vector2D) Multiplied(by float64) *Vector2D {
+	return &Vector2D{
+		x: s.x * by,
+		y: s.y * by,
+	}
 }
