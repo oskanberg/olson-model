@@ -72,14 +72,14 @@ func (s *PLGMN) NewGateFromGenome(genome []byte, startPosition int) {
 	read := (startPosition + 2) % genomeLen
 
 	// first byte is num of input nodes
-	numberIn := FloorByte(genome[read] / (255 / MaximumInNodes))
+	numberIn := int(genome[read] / (255 / MaximumInNodes))
 	if numberIn < MinimumInNodes {
 		numberIn = MinimumInNodes
 	}
 	read = (read + 1) % genomeLen
 
 	// next byte is num of output nodes
-	numberOut := FloorByte(genome[read] / (255 / MaximumOutNodes))
+	numberOut := int(genome[read] / (255 / MaximumOutNodes))
 	if numberOut < MinimumOutNodes {
 		numberOut = MinimumOutNodes
 	}

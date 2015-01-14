@@ -8,47 +8,47 @@ import (
 
 func TestRotate(t *testing.T) {
 	vector := Vector2D{
-		x: 1.0,
-		y: 0,
+		X: 1.0,
+		Y: 0,
 	}
 	rotated := vector.Rotated(math.Pi)
 	fmt.Println(vector, rotated)
 	// some floating point errors
-	if rotated.x != -1 || rotated.y > 0.000000001 || rotated.y < -0.000000000001 {
-		t.Errorf("vector rotation failed. %f, %f", rotated.x, rotated.y)
+	if rotated.X != -1 || rotated.Y > 0.000000001 || rotated.Y < -0.000000000001 {
+		t.Errorf("vector rotation failed. %f, %f", rotated.X, rotated.Y)
 	}
 
 	vector = Vector2D{
-		x: -1.0,
-		y: 0,
+		X: -1.0,
+		Y: 0,
 	}
 	rotated = vector.Rotated(math.Pi)
 	fmt.Println(vector, rotated)
 	// some floating point errors
-	if rotated.x != 1 || rotated.y > 0.000000001 || rotated.y < -0.000000000001 {
-		t.Errorf("vector rotation failed. %f, %f", rotated.x, rotated.y)
+	if rotated.X != 1 || rotated.Y > 0.000000001 || rotated.Y < -0.000000000001 {
+		t.Errorf("vector rotation failed. %f, %f", rotated.X, rotated.Y)
 	}
 
 	vector = Vector2D{
-		x: 1.0,
-		y: 1.0,
+		X: 1.0,
+		Y: 1.0,
 	}
 	rotated = vector.Rotated(-math.Pi)
 	fmt.Println(vector, rotated)
 	// some floating point errors
-	if rotated.x != -0.9999999999999999 || rotated.y != -1.0000000000000002 {
-		t.Errorf("vector rotation failed. %f, %f", rotated.x, rotated.y)
+	if rotated.X != -0.9999999999999999 || rotated.Y != -1.0000000000000002 {
+		t.Errorf("vector rotation failed. %f, %f", rotated.X, rotated.Y)
 	}
 }
 
 func TestDot(t *testing.T) {
 	first := &Vector2D{
-		x: 1.0,
-		y: 0,
+		X: 1.0,
+		Y: 0,
 	}
 	second := &Vector2D{
-		x: 1.0,
-		y: 1.0,
+		X: 1.0,
+		Y: 1.0,
 	}
 	angle := first.Dot(second)
 	fmt.Println(angle)

@@ -25,7 +25,7 @@ func (s *PLG) Run() {
 	var inputState byte = 0
 	for i, _ := range s.in {
 		inputState = inputState << 1
-		inputState = inputState | Booltobyte(s.in[i].GetState())
+		inputState = inputState | BoolToByte(s.in[i].GetState())
 	}
 
 	// fmt.Println("input state")

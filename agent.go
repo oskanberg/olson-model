@@ -3,144 +3,98 @@ package main
 import (
 	urand "crypto/rand"
 	"index/suffixarray"
-	"math"
 	"math/rand"
 	"sync"
 )
 
 type Agent interface {
+	GetFitness() int
+	GetGenome() []byte
 	GetLocation() *Vector2D
 	GetDirection() *Vector2D
 	SetRandomPosition(int, int)
 	// simulate a single time step
-	Run(*World)
+	Run([]*Prey, []*Predator)
 	// update to the new position
 	Step()
 }
 
 type Position struct {
-	location  Vector2D
-	direction Vector2D
+	Location  Vector2D
+	Direction Vector2D
 }
 
-type Prey struct {
-	brain *PLGMN
-	pos   Position
-	posN  Position
-}
-
-func (s *Prey) GetLocation() *Vector2D {
-	return &s.pos.location
-}
-
-func (s *Prey) GetDirection() *Vector2D {
-	return &s.pos.direction
-}
-
-func (s *Prey) SetRandomPosition(maxWidth, maxHeight int) {
-	newPos := &Position{
-		location: Vector2D{
-			x: float64(rand.Intn(maxWidth)),
-			y: float64(rand.Intn(maxHeight)),
-		},
-		// TODO: random direction
-		direction: Vector2D{
-			x: 1,
-			y: 0,
-		},
-	}
-	s.pos = *newPos
-	// by default, next timestep should be the same
-	s.posN = *newPos
-}
-
-func (s *Prey) canSee(target Agent) (canSee bool, angle float64) {
-	differenceVector := s.GetLocation()
-	targetLoc := target.GetLocation()
-	differenceVector = differenceVector.Subtract(targetLoc)
-	if differenceVector.Magnitude() > 1000 {
-		// too far away
-		return false, 0
-	}
-	dotProduct := s.GetDirection().Dot(differenceVector.Normalised())
-	if dotProduct > AgentViewAngle {
-		return true, dotProduct
-	}
-	return false, 0
-}
-
-func (s *Prey) updatePosition(actuators []bool) {
-	action := 0
-	for i, v := range actuators {
-		if v {
-			action += int(math.Pow(2, float64(i)))
+func Mutate(genome []byte) []byte {
+	for i, _ := range genome {
+		if rand.Float64() < MutationRate {
+			genome[i] = RandByte()
 		}
 	}
-	switch action {
-	case 0:
-		// do nothing
-		// fmt.Println("doing nothing")
-	case 1:
-		// turn right
-		// fmt.Println("turning right")
-		s.posN.direction = *s.GetDirection().Rotated(PreyTurnAmountRadians)
-	case 2:
-		// turn left
-		// fmt.Println("turning left")
-		s.posN.direction = *s.GetDirection().Rotated(-PreyTurnAmountRadians)
-	case 3:
-		// move straight ahead
-		// TODO: implement variable speed
-		// fmt.Println("moving straight")
-		newLoc := s.GetLocation().Add(s.GetDirection())
-		s.posN.location = *newLoc
+	if len(genome) < 20000 && rand.Float64() < DuplicationLikelihood {
+		genomeLen := len(genome)
+		start := rand.Intn(genomeLen)
+		end := rand.Intn(genomeLen-start) + start
+		insert := rand.Intn(genomeLen)
+		// insert
+		// fmt.Println("Copying section")
+		suffix := append(genome[start:end], genome[insert:]...)
+		genome = append(genome[:insert], suffix...)
 	}
+	if len(genome) > 1000 && rand.Float64() < DeletionLikelihood {
+		genomeLen := len(genome)
+		start := rand.Intn(genomeLen)
+		end := rand.Intn(genomeLen-start) + start
+		// delete
+		// fmt.Println("Deleting section")
+		genome = append(genome[:start], genome[end:]...)
+	}
+	return genome
 }
 
-func (s *Prey) Run(w *World) {
-	sensorValues := make([]bool, NumRetinaSlices*2)
-	// read into first sensors (prey)
-	for i, _ := range w.prey {
-		// ignore itself
-		if w.prey[i] != s {
-			if b, a := s.canSee(w.prey[i]); b {
-				// map to correct sensor
-				// a can be negative
-				sliceIndex := int(a/RetinaSliceWidthRadians) + (NumRetinaSlices / 2)
-				sensorValues[sliceIndex] = true
-			}
-		}
+func NewPrey(genomeO []byte, mutate bool) *Prey {
+	genome := make([]byte, len(genomeO))
+	copy(genome, genomeO)
+	if mutate {
+		genome = Mutate(genome)
 	}
-	// read into second set of sensors (predators)
-	for i, _ := range w.predators {
-		if b, a := s.canSee(w.predators[i]); b {
-			sliceIndex := int(a/RetinaSliceWidthRadians) + NumRetinaSlices
-			sensorValues[sliceIndex] = true
-		}
-	}
-	actuators := s.brain.Run(sensorValues)
-	// update positions
-	s.updatePosition(actuators)
-}
-
-func (s *Prey) Step() {
-	s.pos = s.posN
-}
-
-func NewPrey(genome []byte) *Prey {
 	newPrey := &Prey{
-		brain: DeserialiseGenome(genome),
+		fitness: 0,
+		genome:  genome,
+		brain:   DeserialiseGenome(genome),
 		pos: Position{
-			location:  Vector2D{0, 0},
-			direction: Vector2D{1, 0},
+			Location:  Vector2D{0, 0},
+			Direction: Vector2D{1, 0},
 		},
 		posN: Position{
-			location:  Vector2D{0, 0},
-			direction: Vector2D{1, 0},
+			Location:  Vector2D{0, 0},
+			Direction: Vector2D{1, 0},
 		},
 	}
-	newPrey.SetRandomPosition(500, 500)
+	newPrey.SetRandomPosition(SimulationSpaceSize, SimulationSpaceSize)
 	return newPrey
+}
+
+func NewPredator(genomeO []byte, mutate bool) *Predator {
+	genome := make([]byte, len(genomeO))
+	copy(genome, genomeO)
+	if mutate {
+		genome = Mutate(genome)
+	}
+	newPredator := &Predator{
+		fitness: 0,
+		genome:  genome,
+		brain:   DeserialiseGenome(genome),
+		pos: Position{
+			Location:  Vector2D{0, 0},
+			Direction: Vector2D{1, 0},
+		},
+		posN: Position{
+			Location:  Vector2D{0, 0},
+			Direction: Vector2D{1, 0},
+		},
+	}
+	newPredator.SetRandomPosition(SimulationSpaceSize, SimulationSpaceSize)
+	return newPredator
 }
 
 func DeserialiseGenome(genome []byte) *PLGMN {
@@ -169,8 +123,8 @@ func GenerateRandomGenome(length int, artificialStartCodons int) []byte {
 	return genome
 }
 
-func runAgentWG(p Agent, world *World, wg *sync.WaitGroup) {
-	p.Run(world)
+func runAgentWG(p Agent, prey []*Prey, predators []*Predator, wg *sync.WaitGroup) {
+	p.Run(prey, predators)
 	wg.Done()
 }
 
