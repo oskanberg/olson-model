@@ -96,20 +96,28 @@ func (s *Simulation) SimulateHeterogeneous(iterations int) {
 		wg.Add(total)
 		for i, _ := range s.predators {
 			go stepAgentWG(s.predators[i], &wg)
-			record.AddRecordToCurrentStep(s.predators[i])
 		}
 		for i, _ := range s.prey {
 			go stepAgentWG(s.prey[i], &wg)
-			record.AddRecordToCurrentStep(s.prey[i])
 		}
 		wg.Wait()
 		s.processDeaths()
+		s.RecordCurrentPositions()
 		record.NewStep()
 	}
 	record.WriteToFile(strconv.Itoa(numRuns))
 	// clear for next run
 	record = NewRecord()
 	numRuns += 1
+}
+
+func (s *Simulation) RecordCurrentPositions() {
+	for i, _ := range s.predators {
+		record.AddRecordToCurrentStep(s.predators[i])
+	}
+	for i, _ := range s.prey {
+		record.AddRecordToCurrentStep(s.prey[i])
+	}
 }
 
 func (s *Simulation) processDeaths() {

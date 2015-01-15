@@ -5,7 +5,10 @@ import "math"
 const SimulationSpaceSize = 1000
 
 const TotalSimulationSteps = 2000
-const TotalGenerations = 10000
+const TotalGenerations = 20
+
+const NumberOfPrey = 10
+const NumberOfPredators = 10
 
 const MaximumOutNodes = 4
 const MaximumInNodes = 4
@@ -16,9 +19,6 @@ const MinimumInNodes = 1
 const NumRetinaSlices = 12
 const NumActuators = 2
 const NumHiddenNodes = 6
-
-const NumberOfPrey = 100
-const NumberOfPredators = 20
 
 //                    two layers øf retina in prey
 const NumTotalNodes = NumRetinaSlices*2 + NumActuators + NumHiddenNodes
@@ -40,4 +40,4 @@ const ArtificialStartCodons = 4
 
 const EatingDistance = 10
 
-var AgentViewAngle = math.Cos(math.Pi)
+var AgentViewAngle = math.Cos(math.Pi / 4)

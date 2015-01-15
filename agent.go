@@ -8,6 +8,7 @@ import (
 )
 
 type Agent interface {
+	GetSensors() string
 	GetFitness() int
 	GetGenome() []byte
 	GetLocation() *Vector2D

@@ -8,8 +8,10 @@ import (
 
 type AgentRecord struct {
 	Position  Position
+	NextPoint Vector2D
 	AgentType string
 	Fitness   int
+	Sensors   string
 }
 
 type Step struct {
@@ -32,15 +34,17 @@ func (s *Record) AddRecordToCurrentStep(agent Agent) {
 			Location:  *agent.GetLocation(),
 			Direction: *agent.GetDirection(),
 		},
-		AgentType: "",
+		Fitness: agent.GetFitness(),
+		Sensors: agent.GetSensors(),
 	}
 
 	switch agent.(type) {
 	case *Prey:
 		agentRecord.AgentType = "Prey"
+		agentRecord.NextPoint = *(agent.GetLocation().Add(agent.GetDirection().Multiplied(PreyViewDistance)))
 	case *Predator:
 		agentRecord.AgentType = "Predator"
-		agentRecord.Fitness = agent.GetFitness()
+		agentRecord.NextPoint = *(agent.GetLocation().Add(agent.GetDirection().Multiplied(PredatorViewDistance)))
 	}
 	s.Steps[s.currentStep].Positions = append(s.Steps[s.currentStep].Positions, agentRecord)
 }

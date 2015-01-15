@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 )
@@ -11,6 +12,11 @@ type Predator struct {
 	brain   *PLGMN
 	pos     Position
 	posN    Position
+	sensors string
+}
+
+func (s *Predator) GetSensors() string {
+	return s.sensors
 }
 
 func (s *Predator) GetGenome() []byte {
@@ -43,7 +49,7 @@ func (s *Predator) SetRandomPosition(maxWidth, maxHeight int) {
 }
 
 func (s *Predator) canSee(target Agent) (canSee bool, angle float64) {
-	differenceVector := s.GetLocation().Subtract(target.GetLocation())
+	differenceVector := target.GetLocation().Subtract(s.GetLocation())
 	if differenceVector.Magnitude() > PredatorViewDistance {
 		// too far away
 		return false, 0
@@ -90,11 +96,11 @@ func (s *Predator) Run(prey []*Prey, predators []*Predator) {
 		if b, a := s.canSee(prey[i]); b {
 			// map to correct sensor
 			// a can be negative
-
 			sliceIndex := int(a/RetinaSliceWidthRadians) + (NumRetinaSlices / 2)
 			sensorValues[sliceIndex] = true
 		}
 	}
+	s.sensors = fmt.Sprint(sensorValues)
 	actuators := s.brain.Run(sensorValues)
 	// fmt.Println(actuators)
 	// update positions
