@@ -9,7 +9,7 @@ import (
 type Prey struct {
 	fitness int
 	genome  []byte
-	brain   *PLGMN
+	brain   Brain
 	pos     Position
 	posN    Position
 	sensors string
@@ -48,7 +48,7 @@ func (s *Prey) SetRandomPosition(maxWidth, maxHeight int) {
 	s.posN = *newPos
 }
 
-func (s *Prey) canSee(target Agent) (canSee bool, angle float64) {
+func (s *Prey) CanSee(target Agent) (canSee bool, angle float64) {
 	differenceVector := target.GetLocation().Subtract(s.GetLocation())
 	if differenceVector.Magnitude() > PreyViewDistance {
 		// too far away
@@ -56,6 +56,10 @@ func (s *Prey) canSee(target Agent) (canSee bool, angle float64) {
 	}
 	dotProduct := s.GetDirection().Dot(differenceVector.Normalised())
 	if dotProduct > AgentViewAngle {
+		pdp := s.GetDirection().X*differenceVector.Y - s.GetDirection().Y*differenceVector.X
+		if pdp > 0 {
+			dotProduct = 1 + (1 - dotProduct)
+		}
 		return true, dotProduct
 	}
 	return false, 0
@@ -91,25 +95,27 @@ func (s *Prey) updatePosition(actuators []bool) {
 func (s *Prey) Run(prey []*Prey, predators []*Predator) {
 	// fmt.Println(s)
 	// update fitness
-	s.fitness += 1
 
+	s.fitness += 1
 	sensorValues := make([]bool, NumRetinaSlices*2)
 	// read into first sensors (prey)
 	for i, _ := range prey {
 		// ignore itself
 		if prey[i] != s {
-			if b, a := s.canSee(prey[i]); b {
+			if b, a := s.CanSee(prey[i]); b {
 				// map to correct sensor
-				// a can be negative
-				sliceIndex := int(a/RetinaSliceWidthRadians) + (NumRetinaSlices / 2)
+				// a is a number from AgentViewAngle to 1 + (1 - AgentViewAngle)
+				sliceIndex := int((a - AgentViewAngle) / RetinaSliceWidth)
 				sensorValues[sliceIndex] = true
 			}
 		}
 	}
 	// read into second set of sensors (predators)
 	for i, _ := range predators {
-		if b, a := s.canSee(predators[i]); b {
-			sliceIndex := int(a/RetinaSliceWidthRadians) + (NumRetinaSlices / 2) + NumRetinaSlices
+		if b, a := s.CanSee(predators[i]); b {
+			// map to correct sensor
+			// a is a number from AgentViewAngle to 1 + (1 - AgentViewAngle)
+			sliceIndex := int((a-AgentViewAngle)/RetinaSliceWidth) + NumRetinaSlices
 			sensorValues[sliceIndex] = true
 		}
 	}

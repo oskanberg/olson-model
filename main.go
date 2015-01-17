@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"runtime"
 	"time"
@@ -37,16 +38,24 @@ func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	simulation := NewSimulation()
-	simulation.RandomPopulation(NumberOfPredators, NumberOfPrey)
-	// for i := 0; i < NumberOfPredators; i++ {
-	// 	simulation.InsertPredatorFromFile("genomes/startPredator.genome")
-	// }
+	if SeedPredators {
+		numPredators := int(math.Max(float64(NumberOfPredators-1), 0))
+		simulation.RandomPopulation(numPredators, NumberOfPrey)
+		// for i := 0; i < NumberOfPredators; i++ {
+		simulation.InsertPredatorFromFile("genome/5.csv")
+		// }
+	} else {
+		simulation.RandomPopulation(NumberOfPredators, NumberOfPrey)
+	}
 
 	for generation := 0; generation < TotalGenerations; generation++ {
 		fmt.Println("Generation ", generation)
 		// simulation.SimulateHomogeneous(TotalSimulationSteps)
 		simulation.SimulateHeterogeneous(TotalSimulationSteps)
 		simulation.MoranSelectNextGeneration()
+	}
+	if SavePredators {
+		simulation.SavePredatorGenomes()
 	}
 
 }

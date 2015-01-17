@@ -73,6 +73,30 @@ func (s *Simulation) InsertPredatorFromFile(filename string) {
 	s.predators = append(s.predators, NewPredator(genome, false))
 }
 
+func (s *Simulation) SavePredatorGenomes() {
+	for prd, _ := range s.predators {
+		genome := s.predators[prd].GetGenome()
+		strGenome := make([]string, len(genome))
+		for i, _ := range genome {
+			strGenome[i] = strconv.Itoa(int(genome[i]))
+		}
+
+		csvFile, err := os.Create("genome/" + strconv.Itoa(prd) + ".csv")
+		if err != nil {
+			fmt.Println(err)
+		}
+		defer csvFile.Close()
+
+		writer := csv.NewWriter(csvFile)
+		err = writer.Write(strGenome)
+		if err != nil {
+			fmt.Println("Error:", err)
+			return
+		}
+		writer.Flush()
+	}
+}
+
 // simulate the current simulation clonally for given steps
 func (s *Simulation) SimulateHomogeneous(iterations int) {
 	// TODO
@@ -105,7 +129,8 @@ func (s *Simulation) SimulateHeterogeneous(iterations int) {
 		s.RecordCurrentPositions()
 		record.NewStep()
 	}
-	record.WriteToFile(strconv.Itoa(numRuns))
+	// record.WriteToFile(strconv.Itoa(numRuns))
+	record.WriteToFile("1")
 	// clear for next run
 	record = NewRecord()
 	numRuns += 1
@@ -123,15 +148,31 @@ func (s *Simulation) RecordCurrentPositions() {
 func (s *Simulation) processDeaths() {
 	deaths := make(map[int]bool)
 
-	//TODO: implement quadtree?
+	//TODO: implement quadtree? utilise view logic?
 	for prd, _ := range s.predators {
-		for pry, _ := range s.prey {
+		// handling time
+		if EatCooldown && s.predators[prd].timeSinceKill < 10 {
+			continue
+		}
+		// only check those nearby
+		for pry, _ := range s.predators[prd].nearbyCache {
 			preyLoc := s.prey[pry].GetLocation()
 			distance := s.predators[prd].GetLocation().Subtract(preyLoc).Magnitude()
 			// fmt.Printf("Distance from predator: %f \n", distance)
 			if distance <= EatingDistance {
-				deaths[pry] = true
-				s.predators[prd].fitness += 1
+				if PredatorConfusion {
+					denominator := math.Max(float64(len(s.predators[prd].viewCache)), 1)
+					likelihood := 1 / denominator
+					if rand.Float64() < likelihood {
+						s.predators[prd].fitness += 1
+						deaths[pry] = true
+						s.predators[prd].timeSinceKill = 0
+					}
+				} else {
+					s.predators[prd].fitness += 1
+					s.predators[prd].timeSinceKill = 0
+					deaths[pry] = true
+				}
 			}
 		}
 	}
@@ -168,9 +209,9 @@ func (s *Simulation) MoranSelectNextGeneration() {
 func (s *Simulation) getMoranPreyGeneration() []*Prey {
 	var totalPreyFitness float64 = math.SmallestNonzeroFloat64
 	var highestFitness float64 = 0
-
+	var fitness float64
 	for i, _ := range s.prey {
-		fitness := float64(s.prey[i].GetFitness())
+		fitness = float64(s.prey[i].GetFitness())
 		totalPreyFitness += fitness
 		if fitness > highestFitness {
 			highestFitness = fitness

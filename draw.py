@@ -20,8 +20,12 @@ class Pane(object):
 
     def drawAgent(self, agent):
     	colour = black
-    	renderFitness = True
-        renderSensors = True
+    	renderPredatorFitness = True
+        renderPreyFitness = False
+        renderSensors = False
+        renderPreyViewCirle = False
+        renderPredatorViewCirle = True
+        renderViewLine = False
 
     	x = agent['Position']['Location']['X']
     	y = agent['Position']['Location']['Y']
@@ -29,19 +33,26 @@ class Pane(object):
         nx = agent['NextPoint']['X']
         ny = agent['NextPoint']['Y']
         
+
         if agent['AgentType'] == 'Predator':
             colour = red
-            pygame.draw.circle(self.screen, (grey), (int(x), int(y)), 200, 1)
+            if renderPredatorViewCirle:
+                pygame.draw.circle(self.screen, (grey), (int(x), int(y)), 200, 1)
+            if renderPredatorFitness:
+                myfont = pygame.font.SysFont("monospace", 15)
+                label = myfont.render(str(agent['Fitness']), 1, black)
+                self.screen.blit(label, (x, y))
         else:
-            pygame.draw.circle(self.screen, (grey), (int(x), int(y)), 100, 1)
+            if renderPreyViewCirle:
+                pygame.draw.circle(self.screen, (grey), (int(x), int(y)), 100, 1)
+            if renderPreyFitness:
+                myfont = pygame.font.SysFont("monospace", 15)
+                label = myfont.render(str(agent['Fitness']), 1, black)
+                self.screen.blit(label, (x, y))
 
-        pygame.draw.circle(self.screen, (colour), (int(x), int(y)), 10)
-        pygame.draw.line(self.screen, (colour), (x, y), (nx, ny))
-
-        if renderFitness:
-        	myfont = pygame.font.SysFont("monospace", 15)
-	        label = myfont.render(str(agent['Fitness']), 1, black)
-	        self.screen.blit(label, (x, y))
+        pygame.draw.circle(self.screen, (colour), (int(x), int(y)), 5)
+        if renderViewLine:
+            pygame.draw.line(self.screen, (colour), (x, y), (nx, ny))
 
         if renderSensors:
             myfont = pygame.font.SysFont("monospace", 5)
@@ -56,11 +67,9 @@ class Pane(object):
 	    	for position in step['Positions']:
 	    		self.drawAgent(position)
 	    	pygame.display.flip()
-	    	time.sleep(0.1)
+	    	time.sleep(0.005)
 	    	self.screen.fill(white)	
     	raw_input()
-
-
 
 display = Pane()
 display.load_and_draw()

@@ -7,12 +7,15 @@ import (
 )
 
 type Predator struct {
-	fitness int
-	genome  []byte
-	brain   *PLGMN
-	pos     Position
-	posN    Position
-	sensors string
+	fitness       int
+	genome        []byte
+	brain         Brain
+	pos           Position
+	posN          Position
+	sensors       string
+	nearbyCache   []Agent
+	viewCache     []Agent
+	timeSinceKill int
 }
 
 func (s *Predator) GetSensors() string {
@@ -48,14 +51,20 @@ func (s *Predator) SetRandomPosition(maxWidth, maxHeight int) {
 	s.posN = *newPos
 }
 
-func (s *Predator) canSee(target Agent) (canSee bool, angle float64) {
+func (s *Predator) CanSee(target Agent) (canSee bool, angle float64) {
 	differenceVector := target.GetLocation().Subtract(s.GetLocation())
 	if differenceVector.Magnitude() > PredatorViewDistance {
 		// too far away
 		return false, 0
 	}
+	s.nearbyCache = append(s.nearbyCache, target)
 	dotProduct := s.GetDirection().Dot(differenceVector.Normalised())
 	if dotProduct > AgentViewAngle {
+		// correct the sign
+		pdp := s.GetDirection().X*differenceVector.Y - s.GetDirection().Y*differenceVector.X
+		if pdp > 0 {
+			dotProduct = 1 + (1 - dotProduct)
+		}
 		return true, dotProduct
 	}
 	return false, 0
@@ -83,26 +92,28 @@ func (s *Predator) updatePosition(actuators []bool) {
 	case 3:
 		// move straight ahead
 		// fmt.Println("moving straight")
-		newLoc := s.GetLocation().Add(s.GetDirection()).Wrap(SimulationSpaceSize, SimulationSpaceSize)
+		newLoc := s.GetLocation().Add(s.GetDirection().Multiplied(PredatorSpeedMultiplier)).Wrap(SimulationSpaceSize, SimulationSpaceSize)
 		s.posN.Location = *newLoc
 	}
 }
 
 func (s *Predator) Run(prey []*Prey, predators []*Predator) {
-
-	sensorValues := make([]bool, NumRetinaSlices*2)
+	s.viewCache = nil
+	s.nearbyCache = nil
+	s.timeSinceKill += 1
+	sensorValues := make([]bool, NumRetinaSlices)
 	// read into first sensors (prey)
 	for i, _ := range prey {
-		if b, a := s.canSee(prey[i]); b {
+		if b, a := s.CanSee(prey[i]); b {
+			s.viewCache = append(s.viewCache, prey[i])
 			// map to correct sensor
-			// a can be negative
-			sliceIndex := int(a/RetinaSliceWidthRadians) + (NumRetinaSlices / 2)
+			// a is a number from AgentViewAngle to 1 + (1 - AgentViewAngle)
+			sliceIndex := int((a - AgentViewAngle) / RetinaSliceWidth)
 			sensorValues[sliceIndex] = true
 		}
 	}
 	s.sensors = fmt.Sprint(sensorValues)
 	actuators := s.brain.Run(sensorValues)
-	// fmt.Println(actuators)
 	// update positions
 	s.updatePosition(actuators)
 }

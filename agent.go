@@ -7,6 +7,11 @@ import (
 	"sync"
 )
 
+type Brain interface {
+	Run([]bool) []bool
+	ToString() string
+}
+
 type Agent interface {
 	GetSensors() string
 	GetFitness() int
@@ -14,6 +19,7 @@ type Agent interface {
 	GetLocation() *Vector2D
 	GetDirection() *Vector2D
 	SetRandomPosition(int, int)
+	CanSee(Agent) (bool, float64)
 	// simulate a single time step
 	Run([]*Prey, []*Predator)
 	// update to the new position
@@ -59,9 +65,9 @@ func NewPrey(genomeO []byte, mutate bool) *Prey {
 		genome = Mutate(genome)
 	}
 	newPrey := &Prey{
-		fitness: 0,
+		fitness: 1000,
 		genome:  genome,
-		brain:   DeserialiseGenome(genome),
+		brain:   DeserialiseGenomeLinearWeights(genome),
 		pos: Position{
 			Location:  Vector2D{0, 0},
 			Direction: Vector2D{1, 0},
@@ -84,7 +90,7 @@ func NewPredator(genomeO []byte, mutate bool) *Predator {
 	newPredator := &Predator{
 		fitness: 0,
 		genome:  genome,
-		brain:   DeserialiseGenome(genome),
+		brain:   DeserialiseGenomeLinearWeights(genome),
 		pos: Position{
 			Location:  Vector2D{0, 0},
 			Direction: Vector2D{1, 0},
@@ -93,12 +99,14 @@ func NewPredator(genomeO []byte, mutate bool) *Predator {
 			Location:  Vector2D{0, 0},
 			Direction: Vector2D{1, 0},
 		},
+		nearbyCache:   make([]Agent, 0),
+		timeSinceKill: -100,
 	}
 	newPredator.SetRandomPosition(SimulationSpaceSize, SimulationSpaceSize)
 	return newPredator
 }
 
-func DeserialiseGenome(genome []byte) *PLGMN {
+func DeserialiseGenomePLGMN(genome []byte) *PLGMN {
 	mn := NewPLGMN()
 
 	index := suffixarray.New(genome)
@@ -110,6 +118,20 @@ func DeserialiseGenome(genome []byte) *PLGMN {
 	}
 
 	return mn
+}
+
+func DeserialiseGenomeLinearWeights(genome []byte) *LinearWeights {
+	lw := NewLinearWeights(NumRetinaSlices * 2)
+
+	index := suffixarray.New(genome)
+	genomeStarts := index.Lookup([]byte{42, 213}, -1)
+
+	// add each gate
+	for _, start := range genomeStarts {
+		lw.AddWeightsFromGenome(genome, start)
+	}
+
+	return lw
 }
 
 // Note: this is not guaranteed to create exact number of codons (due to overlap)
