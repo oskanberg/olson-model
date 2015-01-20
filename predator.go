@@ -18,6 +18,12 @@ type Predator struct {
 	timeSinceKill int
 }
 
+func (s *Predator) Reset() {
+	s.SetRandomPosition(SimulationSpaceSize, SimulationSpaceSize)
+	s.brain.Reset()
+	s.timeSinceKill = PreyHeadStart
+}
+
 func (s *Predator) GetSensors() string {
 	return s.sensors
 }
@@ -59,13 +65,17 @@ func (s *Predator) CanSee(target Agent) (canSee bool, angle float64) {
 	}
 	s.nearbyCache = append(s.nearbyCache, target)
 	dotProduct := s.GetDirection().Dot(differenceVector.Normalised())
-	if dotProduct > AgentViewAngle {
-		// correct the sign
+	if dotProduct > CosHalfAgentViewAngle {
+		// sometimes float precision error causes Acos to panic
+		if dotProduct > 1 {
+			dotProduct = 1
+		}
+		angle := math.Acos(dotProduct)
 		pdp := s.GetDirection().X*differenceVector.Y - s.GetDirection().Y*differenceVector.X
 		if pdp > 0 {
-			dotProduct = 1 + (1 - dotProduct)
+			angle = -angle
 		}
-		return true, dotProduct
+		return true, angle
 	}
 	return false, 0
 }
@@ -101,15 +111,26 @@ func (s *Predator) Run(prey []*Prey, predators []*Predator) {
 	s.viewCache = nil
 	s.nearbyCache = nil
 	s.timeSinceKill += 1
-	sensorValues := make([]bool, NumRetinaSlices)
+	sensorValues := make([]bool, NumRetinaSlices*2)
 	// read into first sensors (prey)
 	for i, _ := range prey {
 		if b, a := s.CanSee(prey[i]); b {
 			s.viewCache = append(s.viewCache, prey[i])
 			// map to correct sensor
-			// a is a number from AgentViewAngle to 1 + (1 - AgentViewAngle)
-			sliceIndex := int((a - AgentViewAngle) / RetinaSliceWidth)
+			// a is a number from -(AgentViewAngleRadians/2) to AgentViewAngleRadians/2
+			sliceIndex := int((a + HalfAgentViewAngleRadians) / RetinaSliceWidth)
 			sensorValues[sliceIndex] = true
+		}
+	}
+	// read into second set of sensors (predators)
+	for i, _ := range predators {
+		if predators[i] != s {
+			if b, a := s.CanSee(predators[i]); b {
+				// map to correct sensor
+				//a is a number from -(AgentViewAngleRadians/2) to AgentViewAngleRadians/2
+				sliceIndex := int((a+HalfAgentViewAngleRadians)/RetinaSliceWidth) + NumRetinaSlices
+				sensorValues[sliceIndex] = true
+			}
 		}
 	}
 	s.sensors = fmt.Sprint(sensorValues)
@@ -120,4 +141,12 @@ func (s *Predator) Run(prey []*Prey, predators []*Predator) {
 
 func (s *Predator) Step() {
 	s.pos = s.posN
+}
+
+// func (s *Predator) PrintStatistics() {
+// 	s.brain.PrintStatistics()
+// }
+
+func (s *Predator) ToString() string {
+	return s.brain.ToString()
 }

@@ -57,14 +57,24 @@ func (s *Vector2D) Multiplied(by float64) *Vector2D {
 
 func (s *Vector2D) Wrap(XLimit, YLimit float64) *Vector2D {
 
-	newX := math.Mod(s.X, XLimit)
+	// newX := math.Mod(s.X, XLimit)
+	// if newX < 0 {
+	// 	newX = XLimit - newX
+	// }
+
+	// newY := math.Mod(s.Y, YLimit)
+	// if newY < 0 {
+	// 	newY = YLimit - newY
+	// }
+
+	newX := math.Min(s.X, XLimit)
 	if newX < 0 {
-		newX = XLimit - newX
+		newX = 0
 	}
 
-	newY := math.Mod(s.Y, YLimit)
+	newY := math.Min(s.Y, YLimit)
 	if newY < 0 {
-		newY = YLimit - newY
+		newY = 0
 	}
 
 	return &Vector2D{

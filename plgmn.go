@@ -11,6 +11,12 @@ type PLGMN struct {
 	nodes []Node
 }
 
+func (s *PLGMN) Reset() {
+	for _, n := range s.nodes {
+		n.SetState(false)
+	}
+}
+
 func (s *PLGMN) Run(sensorValues []bool) []bool {
 	// just write to the first nodes
 	for i, v := range sensorValues {

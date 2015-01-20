@@ -73,67 +73,115 @@ func (s *Simulation) InsertPredatorFromFile(filename string) {
 	s.predators = append(s.predators, NewPredator(genome, false))
 }
 
+func (s *Simulation) InsertPreyFromFile(filename string) {
+	csvFile, err := os.Open(filename)
+	if err != nil {
+		fmt.Println("Failed to open genome file. ", err)
+	}
+	defer csvFile.Close()
+	reader := csv.NewReader(csvFile)
+	reader.FieldsPerRecord = -1
+	raw, err := reader.ReadAll()
+	csvData := raw[0]
+	if err != nil {
+		fmt.Println("Failed to read CSV data. ", err)
+	}
+	genome := make([]byte, len(csvData))
+	for i, d := range csvData {
+		geneInt, err := strconv.Atoi(d)
+		if err != nil {
+			fmt.Println("Failed to parse gene to int", err)
+		}
+		genome[i] = byte(geneInt)
+	}
+	// fmt.Println(genome)
+
+	s.prey = append(s.prey, NewPrey(genome, false))
+}
+
+func (s *Simulation) saveAgentGenome(prd Agent, filename string) {
+	genome := prd.GetGenome()
+	strGenome := make([]string, len(genome))
+	for i, _ := range genome {
+		strGenome[i] = strconv.Itoa(int(genome[i]))
+	}
+
+	csvFile, err := os.Create(filename)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer csvFile.Close()
+
+	writer := csv.NewWriter(csvFile)
+	err = writer.Write(strGenome)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	writer.Flush()
+}
+
 func (s *Simulation) SavePredatorGenomes() {
-	for prd, _ := range s.predators {
-		genome := s.predators[prd].GetGenome()
-		strGenome := make([]string, len(genome))
-		for i, _ := range genome {
-			strGenome[i] = strconv.Itoa(int(genome[i]))
-		}
-
-		csvFile, err := os.Create("genome/" + strconv.Itoa(prd) + ".csv")
-		if err != nil {
-			fmt.Println(err)
-		}
-		defer csvFile.Close()
-
-		writer := csv.NewWriter(csvFile)
-		err = writer.Write(strGenome)
-		if err != nil {
-			fmt.Println("Error:", err)
-			return
-		}
-		writer.Flush()
+	for i, prd := range s.predators {
+		s.saveAgentGenome(prd, "genome/predator/"+Model+"/"+strconv.Itoa(i)+".genome")
 	}
 }
 
-// simulate the current simulation clonally for given steps
-func (s *Simulation) SimulateHomogeneous(iterations int) {
-	// TODO
+func (s *Simulation) SavePreyGenomes() {
+	for i, pry := range s.prey {
+		s.saveAgentGenome(pry, "genome/prey/"+Model+"/"+strconv.Itoa(i)+".genome")
+	}
 }
 
 // simulate the current simulation naturally for given steps
-func (s *Simulation) SimulateHeterogeneous(iterations int) {
-	var wg sync.WaitGroup
-	var total int
-	for iteration := 0; iteration < iterations; iteration++ {
-		total = len(s.prey) + len(s.predators)
-		wg.Add(total)
-		for i, _ := range s.predators {
-			go runAgentWG(s.predators[i], s.prey, s.predators, &wg)
-		}
-		for i, _ := range s.prey {
-			go runAgentWG(s.prey[i], s.prey, s.predators, &wg)
-		}
-		wg.Wait()
+func (s *Simulation) Simulate(simulationStep int, roundsPerGen int) {
+	for i := 0; i < roundsPerGen; i++ {
 
-		wg.Add(total)
+		// clear dead for next round
+		if len(s.dead) > 0 {
+			// add dead agents back to the population for eval
+			s.prey = append(s.prey, s.dead...)
+			// clear dead
+			s.dead = nil
+		}
 		for i, _ := range s.predators {
-			go stepAgentWG(s.predators[i], &wg)
+			s.predators[i].Reset()
 		}
 		for i, _ := range s.prey {
-			go stepAgentWG(s.prey[i], &wg)
+			s.prey[i].Reset()
 		}
-		wg.Wait()
-		s.processDeaths()
-		s.RecordCurrentPositions()
-		record.NewStep()
+
+		var wg sync.WaitGroup
+		var total int
+		for iteration := 0; iteration < simulationStep; iteration++ {
+			total = len(s.prey) + len(s.predators)
+			wg.Add(total)
+			for i, _ := range s.predators {
+				go runAgentWG(s.predators[i], s.prey, s.predators, &wg)
+			}
+			for i, _ := range s.prey {
+				go runAgentWG(s.prey[i], s.prey, s.predators, &wg)
+			}
+			wg.Wait()
+
+			wg.Add(total)
+			for i, _ := range s.predators {
+				go stepAgentWG(s.predators[i], &wg)
+			}
+			for i, _ := range s.prey {
+				go stepAgentWG(s.prey[i], &wg)
+			}
+			wg.Wait()
+			s.processDeaths()
+			s.RecordCurrentPositions()
+			record.NewStep()
+		}
+		// record.WriteToFile(strconv.Itoa(numRuns))
+		record.WriteToFile("1")
+		// clear for next run
+		record = NewRecord()
+		numRuns += 1
 	}
-	// record.WriteToFile(strconv.Itoa(numRuns))
-	record.WriteToFile("1")
-	// clear for next run
-	record = NewRecord()
-	numRuns += 1
 }
 
 func (s *Simulation) RecordCurrentPositions() {
@@ -151,27 +199,50 @@ func (s *Simulation) processDeaths() {
 	//TODO: implement quadtree? utilise view logic?
 	for prd, _ := range s.predators {
 		// handling time
-		if EatCooldown && s.predators[prd].timeSinceKill < 10 {
+		if EatCooldown && s.predators[prd].timeSinceKill < 100 {
 			continue
 		}
 		// only check those nearby
-		for pry, _ := range s.predators[prd].nearbyCache {
-			preyLoc := s.prey[pry].GetLocation()
+		for _, target := range s.predators[prd].nearbyCache {
+			switch target.(type) {
+			case *Predator:
+				continue
+			}
+			preyLoc := target.GetLocation()
 			distance := s.predators[prd].GetLocation().Subtract(preyLoc).Magnitude()
 			// fmt.Printf("Distance from predator: %f \n", distance)
 			if distance <= EatingDistance {
 				if PredatorConfusion {
-					denominator := math.Max(float64(len(s.predators[prd].viewCache)), 1)
+					var visiblePrey float64 = 0
+					for _, agent := range s.predators[prd].viewCache {
+						switch agent.(type) {
+						case *Prey:
+							visiblePrey += 1
+						}
+					}
+					denominator := math.Max(visiblePrey, 1)
 					likelihood := 1 / denominator
 					if rand.Float64() < likelihood {
 						s.predators[prd].fitness += 1
-						deaths[pry] = true
+						for i, p := range s.prey {
+							if p == target {
+								deaths[i] = true
+							}
+						}
 						s.predators[prd].timeSinceKill = 0
+					} else {
+						s.predators[prd].timeSinceKill = 0
+						// fmt.Println("I'm confused")
 					}
 				} else {
 					s.predators[prd].fitness += 1
 					s.predators[prd].timeSinceKill = 0
-					deaths[pry] = true
+
+					for i, p := range s.prey {
+						if p == target {
+							deaths[i] = true
+						}
+					}
 				}
 			}
 		}
@@ -198,6 +269,11 @@ func (s *Simulation) processDeaths() {
 }
 
 func (s *Simulation) MoranSelectNextGeneration() {
+	// for i, _ := range s.predators {
+	// 	fmt.Println("\n\n\n")
+	// 	// s.predators[i].PrintStatistics()
+	// 	fmt.Println(s.predators[i].ToString())
+	// }
 	// add dead agents back to the population for eval
 	s.prey = append(s.prey, s.dead...)
 	// clear dead

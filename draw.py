@@ -24,8 +24,8 @@ class Pane(object):
         renderPreyFitness = False
         renderSensors = False
         renderPreyViewCirle = False
-        renderPredatorViewCirle = True
-        renderViewLine = False
+        renderPredatorViewCirle = False
+        renderViewLine = True
 
     	x = agent['Position']['Location']['X']
     	y = agent['Position']['Location']['Y']

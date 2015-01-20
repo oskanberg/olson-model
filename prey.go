@@ -15,6 +15,11 @@ type Prey struct {
 	sensors string
 }
 
+func (s *Prey) Reset() {
+	s.SetRandomPosition(SimulationSpaceSize, SimulationSpaceSize)
+	s.brain.Reset()
+}
+
 func (s *Prey) GetSensors() string {
 	return s.sensors
 }
@@ -55,12 +60,17 @@ func (s *Prey) CanSee(target Agent) (canSee bool, angle float64) {
 		return false, 0
 	}
 	dotProduct := s.GetDirection().Dot(differenceVector.Normalised())
-	if dotProduct > AgentViewAngle {
+	if dotProduct > CosHalfAgentViewAngle {
+		// sometimes float precision error causes Acos to panic
+		if dotProduct > 1 {
+			dotProduct = 1
+		}
+		angle := math.Acos(dotProduct)
 		pdp := s.GetDirection().X*differenceVector.Y - s.GetDirection().Y*differenceVector.X
 		if pdp > 0 {
-			dotProduct = 1 + (1 - dotProduct)
+			angle = -angle
 		}
-		return true, dotProduct
+		return true, angle
 	}
 	return false, 0
 }
@@ -104,8 +114,7 @@ func (s *Prey) Run(prey []*Prey, predators []*Predator) {
 		if prey[i] != s {
 			if b, a := s.CanSee(prey[i]); b {
 				// map to correct sensor
-				// a is a number from AgentViewAngle to 1 + (1 - AgentViewAngle)
-				sliceIndex := int((a - AgentViewAngle) / RetinaSliceWidth)
+				sliceIndex := int((a + HalfAgentViewAngleRadians) / RetinaSliceWidth)
 				sensorValues[sliceIndex] = true
 			}
 		}
@@ -114,8 +123,7 @@ func (s *Prey) Run(prey []*Prey, predators []*Predator) {
 	for i, _ := range predators {
 		if b, a := s.CanSee(predators[i]); b {
 			// map to correct sensor
-			// a is a number from AgentViewAngle to 1 + (1 - AgentViewAngle)
-			sliceIndex := int((a-AgentViewAngle)/RetinaSliceWidth) + NumRetinaSlices
+			sliceIndex := int((a+HalfAgentViewAngleRadians)/RetinaSliceWidth) + NumRetinaSlices
 			sensorValues[sliceIndex] = true
 		}
 	}

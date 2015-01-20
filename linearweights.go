@@ -14,6 +14,10 @@ type LinearWeights struct {
 	forwardWeights []byte
 }
 
+func (s *LinearWeights) Reset() {
+	// nothing to reset
+}
+
 func (s *LinearWeights) calculateWeights(weights []byte, sensors []bool) int {
 	numSensors := len(sensors)
 	// allow overflow
@@ -77,7 +81,8 @@ func (s *LinearWeights) AddWeightsFromGenome(genome []byte, start int) {
 	}
 }
 
-func NewLinearWeights(retinaSlices int) *LinearWeights {
+func NewLinearWeights() *LinearWeights {
+	retinaSlices := NumRetinaSlices * 2
 	lw := &LinearWeights{
 		noopWeights:    make([]byte, retinaSlices+1),
 		leftWeights:    make([]byte, retinaSlices+1),

@@ -10,6 +10,8 @@ import (
 type Brain interface {
 	Run([]bool) []bool
 	ToString() string
+	Reset()
+	// PrintStatistics
 }
 
 type Agent interface {
@@ -65,9 +67,8 @@ func NewPrey(genomeO []byte, mutate bool) *Prey {
 		genome = Mutate(genome)
 	}
 	newPrey := &Prey{
-		fitness: 1000,
+		fitness: 0,
 		genome:  genome,
-		brain:   DeserialiseGenomeLinearWeights(genome),
 		pos: Position{
 			Location:  Vector2D{0, 0},
 			Direction: Vector2D{1, 0},
@@ -76,6 +77,13 @@ func NewPrey(genomeO []byte, mutate bool) *Prey {
 			Location:  Vector2D{0, 0},
 			Direction: Vector2D{1, 0},
 		},
+	}
+	if Model == "MarkovNetwork" {
+		newPrey.brain = DeserialiseGenomeMarkovNetwork(genome)
+	} else if Model == "Olson" {
+		newPrey.brain = DeserialiseGenomePLGMN(genome)
+	} else if Model == "LinearWeights" {
+		newPrey.brain = DeserialiseGenomeLinearWeights(genome)
 	}
 	newPrey.SetRandomPosition(SimulationSpaceSize, SimulationSpaceSize)
 	return newPrey
@@ -90,7 +98,6 @@ func NewPredator(genomeO []byte, mutate bool) *Predator {
 	newPredator := &Predator{
 		fitness: 0,
 		genome:  genome,
-		brain:   DeserialiseGenomeLinearWeights(genome),
 		pos: Position{
 			Location:  Vector2D{0, 0},
 			Direction: Vector2D{1, 0},
@@ -100,7 +107,14 @@ func NewPredator(genomeO []byte, mutate bool) *Predator {
 			Direction: Vector2D{1, 0},
 		},
 		nearbyCache:   make([]Agent, 0),
-		timeSinceKill: -100,
+		timeSinceKill: -PreyHeadStart,
+	}
+	if Model == "MarkovNetwork" {
+		newPredator.brain = DeserialiseGenomeMarkovNetwork(genome)
+	} else if Model == "Olson" {
+		newPredator.brain = DeserialiseGenomePLGMN(genome)
+	} else if Model == "LinearWeights" {
+		newPredator.brain = DeserialiseGenomeLinearWeights(genome)
 	}
 	newPredator.SetRandomPosition(SimulationSpaceSize, SimulationSpaceSize)
 	return newPredator
@@ -121,7 +135,7 @@ func DeserialiseGenomePLGMN(genome []byte) *PLGMN {
 }
 
 func DeserialiseGenomeLinearWeights(genome []byte) *LinearWeights {
-	lw := NewLinearWeights(NumRetinaSlices * 2)
+	lw := NewLinearWeights()
 
 	index := suffixarray.New(genome)
 	genomeStarts := index.Lookup([]byte{42, 213}, -1)
@@ -132,6 +146,20 @@ func DeserialiseGenomeLinearWeights(genome []byte) *LinearWeights {
 	}
 
 	return lw
+}
+
+func DeserialiseGenomeMarkovNetwork(genome []byte) *MarkovNetwork {
+	mn := NewMarkovNetwork()
+
+	index := suffixarray.New(genome)
+	genomeStarts := index.Lookup([]byte{42, 213}, -1)
+
+	// add each gate
+	for _, start := range genomeStarts {
+		mn.AddGateFromGenome(genome, start)
+	}
+
+	return mn
 }
 
 // Note: this is not guaranteed to create exact number of codons (due to overlap)
