@@ -9,13 +9,19 @@ import (
 
 // PLGMN represents the whole MN of gates
 type MarkovNetwork struct {
-	gates      []*ProbabilisticGate
-	nodes      []bool
-	statistics map[string][]bool
+	gates []*ProbabilisticGate
+	nodes []bool
+	// statistics map[string][]bool
 }
 
 func (s *MarkovNetwork) Reset() {
 	for i, _ := range s.nodes {
+		s.nodes[i] = false
+	}
+}
+
+func (s *MarkovNetwork) ResetRetina() {
+	for i := 0; i < NumRetinaSlices*2; i++ {
 		s.nodes[i] = false
 	}
 }
@@ -27,6 +33,8 @@ func (s *MarkovNetwork) AddGateFromGenome(genome []byte, startPosition int) {
 }
 
 func (s *MarkovNetwork) Run(sensorValues []bool) []bool {
+	s.ResetRetina()
+
 	padded := make([]bool, len(s.nodes))
 	copy(padded, sensorValues)
 	err, lOr := LogicalOr(s.nodes, padded)
@@ -40,9 +48,10 @@ func (s *MarkovNetwork) Run(sensorValues []bool) []bool {
 			panic(err)
 		}
 		s.nodes = lOr
+		// fmt.Println("Nodes after gate", i, s.nodes)
 	}
 
-	s.statistics[fmt.Sprint(sensorValues)] = s.nodes[NumTotalNodes-NumActuators : NumTotalNodes]
+	// s.statistics[fmt.Sprint(sensorValues)] = s.nodes[NumTotalNodes-NumActuators : NumTotalNodes]
 	// actuators are just the last nodes
 	return s.nodes[NumTotalNodes-NumActuators : NumTotalNodes]
 }
@@ -170,13 +179,14 @@ func (s *ProbabilisticGate) LoadFromGenome(genome []byte, startPosition int) {
 	numOut = byte(math.Max(float64(numOut), MinimumOutNodes))
 	s.outputIndexes = make([]byte, numOut)
 
+	// read the node indexes for inputs
 	for i := byte(0); i < numIn; i++ {
 		read = (read + 1) % genomeLen
 		s.inputIndexes[i] = genome[read] % (NumTotalNodes - NumActuators)
 	}
 
 	// skip over rest of (poss redundant) indexes
-	read = (read + (MaximumInNodes - int(numIn)) + 1) % genomeLen
+	read = (read + (MaximumInNodes - int(numIn))) % genomeLen
 
 	for i := byte(0); i < numOut; i++ {
 		read = (read + 1) % genomeLen
@@ -184,7 +194,7 @@ func (s *ProbabilisticGate) LoadFromGenome(genome []byte, startPosition int) {
 	}
 
 	// skip over rest of (poss redundant) indexes
-	read = (read + (MaximumOutNodes - int(numOut)) + 1) % genomeLen
+	read = (read + (MaximumOutNodes - int(numOut))) % genomeLen
 
 	// generate list of string representations of inputs, alphabetic
 	formattedCombinations := make([]string, int(math.Pow(2, float64(numIn))))
@@ -234,6 +244,7 @@ func (s *ProbabilisticGate) Run(inputNodes []bool) []bool {
 	}
 
 	likelihoods := s.transitionTable[fmt.Sprint(input)]
+	// fmt.Println("\nlikelihoods: ", likelihoods)
 	var total int = 0
 	for _, v := range likelihoods {
 		total += int(v)
@@ -251,9 +262,11 @@ func (s *ProbabilisticGate) Run(inputNodes []bool) []bool {
 		cumulative += int(likelihoods[choice])
 	}
 
+	// fmt.Println("chosen: ", choice, s.outputCombinationCache[choice])
 	output := make([]bool, NumTotalNodes)
 	for i, v := range s.outputIndexes {
 		value := s.outputCombinationCache[choice][i]
+		// fmt.Println("Node", v, "will become", value)
 		output[v] = value
 	}
 

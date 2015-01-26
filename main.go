@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"runtime"
+	"sync"
 	"time"
 )
 
@@ -51,8 +52,11 @@ func main() {
 
 	for generation := 0; generation < TotalGenerations; generation++ {
 		fmt.Println("Generation ", generation)
-		SimulateHetrogenous(simulation)
-		simulation.MoranSelectNextGeneration()
+		if Method == "Homogenous" {
+			SimulateHomogeneous(simulation)
+		} else if Method == "Hetrogenous" {
+			SimulateHetrogenous(simulation)
+		}
 	}
 	if SavePredators {
 		simulation.SavePredatorGenomes()
@@ -63,9 +67,71 @@ func main() {
 }
 
 func SimulateHetrogenous(s *Simulation) {
-	s.Simulate(TotalSimulationSteps, RoundsPerGeneration)
+	for i := 0; i < RoundsPerGeneration; i++ {
+		s.Simulate(TotalSimulationSteps)
+		s.ResetPopulation()
+		AppendRecordFloat([]float64{s.meanNearbyPrey}, "meannearby.csv")
+		fmt.Println("Mean nearby prey:", s.meanNearbyPrey)
+		s.meanNearbyPrey = 0
+	}
+	s.MoranSelectNextGeneration()
 }
 
-func SimulateHomogeneous() {
+func SimulateHomogeneous(s *Simulation) {
+	var wg sync.WaitGroup
+	var predatorGenome []byte
+	var preyGenome []byte
 
+	var meanNearbyPrey float64
+
+	for _, prd := range s.predators {
+		predatorGenome = prd.GetGenome()
+		wg.Add(1)
+		go func() {
+			simulation := NewSimulation()
+			for i := 0; i < NumberOfPredatorClones; i++ {
+				simulation.AddPredatorFromGenome(predatorGenome)
+			}
+
+			for _, pry := range s.prey {
+				preyGenome = pry.GetGenome()
+				for i := 0; i < NumberOfPreyClones; i++ {
+					simulation.AddPreyFromGenome(preyGenome)
+				}
+
+				for i := 0; i < RoundsPerGeneration; i++ {
+					simulation.Simulate(TotalSimulationSteps)
+					simulation.ResetPopulation()
+				}
+
+				// copy prey fitness back
+				var newFitness int
+				for _, sPry := range simulation.GetPrey() {
+					newFitness += sPry.GetFitness()
+				}
+				newFitness = newFitness / NumberOfPreyClones
+				// fmt.Println("prey updating with fitness", newFitness)
+				pry.fitness = newFitness
+
+				newFitness = 0
+				for _, sPrd := range simulation.GetPredators() {
+					newFitness += sPrd.GetFitness()
+				}
+				newFitness = int(math.Ceil(float64(newFitness) / float64(NumberOfPredatorClones)))
+				// fmt.Println("predator updating with fitness", newFitness)
+				// += to other prey adversaries
+				prd.fitness += newFitness
+				meanNearbyPrey += simulation.meanNearbyPrey
+			}
+			// prd.fitness /= len(s.prey)
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
+
+	meanNearbyPrey /= float64(len(s.prey) * len(s.predators))
+	fmt.Println("Mean nearby prey", meanNearbyPrey)
+
+	s.MoranSelectNextGeneration()
 }

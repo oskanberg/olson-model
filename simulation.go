@@ -15,9 +15,10 @@ var numRuns int = 0
 var record *Record = NewRecord()
 
 type Simulation struct {
-	prey      []*Prey
-	predators []*Predator
-	dead      []*Prey
+	prey           []*Prey
+	predators      []*Predator
+	dead           []*Prey
+	meanNearbyPrey float64
 }
 
 func (s *Simulation) RandomPopulation(numPred, numPrey int) {
@@ -45,6 +46,22 @@ func (s *Simulation) RandomPopulation(numPred, numPrey int) {
 	}
 
 	wg.Wait()
+}
+
+func (s *Simulation) AddPreyFromGenome(genome []byte) {
+	s.prey = append(s.prey, NewPrey(genome, false))
+}
+
+func (s *Simulation) AddPredatorFromGenome(genome []byte) {
+	s.predators = append(s.predators, NewPredator(genome, false))
+}
+
+func (s *Simulation) GetPrey() []*Prey {
+	return s.prey
+}
+
+func (s *Simulation) GetPredators() []*Predator {
+	return s.predators
 }
 
 func (s *Simulation) InsertPredatorFromFile(filename string) {
@@ -133,55 +150,63 @@ func (s *Simulation) SavePreyGenomes() {
 	}
 }
 
-// simulate the current simulation naturally for given steps
-func (s *Simulation) Simulate(simulationStep int, roundsPerGen int) {
-	for i := 0; i < roundsPerGen; i++ {
+func (s *Simulation) ResetPopulation() {
+	// add dead agents back to the population
+	s.prey = append(s.prey, s.dead...)
+	// clear dead
+	s.dead = nil
 
-		// clear dead for next round
-		if len(s.dead) > 0 {
-			// add dead agents back to the population for eval
-			s.prey = append(s.prey, s.dead...)
-			// clear dead
-			s.dead = nil
-		}
+	for i, _ := range s.predators {
+		s.predators[i].Reset()
+	}
+	for i, _ := range s.prey {
+		s.prey[i].Reset()
+	}
+
+}
+
+// simulate the current simulation for given steps
+func (s *Simulation) Simulate(simulationStep int) {
+	var wg sync.WaitGroup
+	var total int
+	for iteration := 0; iteration < simulationStep; iteration++ {
+		total = len(s.prey) + len(s.predators)
+		wg.Add(total)
 		for i, _ := range s.predators {
-			s.predators[i].Reset()
+			go runAgentWG(s.predators[i], s.prey, s.predators, &wg)
 		}
 		for i, _ := range s.prey {
-			s.prey[i].Reset()
+			go runAgentWG(s.prey[i], s.prey, s.predators, &wg)
 		}
+		wg.Wait()
 
-		var wg sync.WaitGroup
-		var total int
-		for iteration := 0; iteration < simulationStep; iteration++ {
-			total = len(s.prey) + len(s.predators)
-			wg.Add(total)
-			for i, _ := range s.predators {
-				go runAgentWG(s.predators[i], s.prey, s.predators, &wg)
-			}
-			for i, _ := range s.prey {
-				go runAgentWG(s.prey[i], s.prey, s.predators, &wg)
-			}
-			wg.Wait()
-
-			wg.Add(total)
-			for i, _ := range s.predators {
-				go stepAgentWG(s.predators[i], &wg)
-			}
-			for i, _ := range s.prey {
-				go stepAgentWG(s.prey[i], &wg)
-			}
-			wg.Wait()
-			s.processDeaths()
+		wg.Add(total)
+		for i, _ := range s.predators {
+			go stepAgentWG(s.predators[i], &wg)
+		}
+		for i, _ := range s.prey {
+			go stepAgentWG(s.prey[i], &wg)
+		}
+		wg.Wait()
+		s.processDeaths()
+		if Method == "Hetrogenous" {
 			s.RecordCurrentPositions()
 			record.NewStep()
 		}
+	}
+	var meanNearby float64
+	for _, pry := range s.prey {
+		meanNearby += float64(pry.nearbyPrey / simulationStep)
+	}
+	s.meanNearbyPrey = meanNearby / float64(len(s.prey))
+
+	if Method == "Hetrogenous" {
 		// record.WriteToFile(strconv.Itoa(numRuns))
 		record.WriteToFile("1")
-		// clear for next run
-		record = NewRecord()
-		numRuns += 1
 	}
+	// clear for next run
+	record = NewRecord()
+	numRuns += 1
 }
 
 func (s *Simulation) RecordCurrentPositions() {
@@ -368,5 +393,7 @@ func (s *Simulation) getMoranPredatorGeneration() []*Predator {
 }
 
 func NewSimulation() *Simulation {
-	return &Simulation{}
+	return &Simulation{
+		meanNearbyPrey: 0,
+	}
 }

@@ -2,9 +2,11 @@ package main
 
 import (
 	urand "crypto/rand"
+	"encoding/csv"
 	"errors"
 	"fmt"
 	"math"
+	"os"
 	"sort"
 )
 
@@ -80,4 +82,25 @@ func RandByte() byte {
 	randomByte := randBuffer[bufRead]
 	bufRead += 1
 	return randomByte
+}
+
+func AppendRecordFloat(data []float64, filename string) {
+	strData := make([]string, len(data))
+	for i, _ := range data {
+		strData[i] = fmt.Sprint(data[i])
+	}
+
+	csvFile, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer csvFile.Close()
+
+	writer := csv.NewWriter(csvFile)
+	err = writer.Write(strData)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	writer.Flush()
 }

@@ -57,11 +57,11 @@ func (s *Predator) SetRandomPosition(maxWidth, maxHeight int) {
 	s.posN = *newPos
 }
 
-func (s *Predator) CanSee(target Agent) (canSee bool, angle float64) {
+func (s *Predator) CanSee(target Agent) (canSee bool, angle float64, distance float64) {
 	differenceVector := target.GetLocation().Subtract(s.GetLocation())
 	if differenceVector.Magnitude() > PredatorViewDistance {
 		// too far away
-		return false, 0
+		return false, 0, 0
 	}
 	s.nearbyCache = append(s.nearbyCache, target)
 	dotProduct := s.GetDirection().Dot(differenceVector.Normalised())
@@ -75,9 +75,9 @@ func (s *Predator) CanSee(target Agent) (canSee bool, angle float64) {
 		if pdp > 0 {
 			angle = -angle
 		}
-		return true, angle
+		return true, angle, differenceVector.Magnitude()
 	}
-	return false, 0
+	return false, 0, 0
 }
 
 func (s *Predator) updatePosition(actuators []bool) {
@@ -114,7 +114,7 @@ func (s *Predator) Run(prey []*Prey, predators []*Predator) {
 	sensorValues := make([]bool, NumRetinaSlices*2)
 	// read into first sensors (prey)
 	for i, _ := range prey {
-		if b, a := s.CanSee(prey[i]); b {
+		if b, a, _ := s.CanSee(prey[i]); b {
 			s.viewCache = append(s.viewCache, prey[i])
 			// map to correct sensor
 			// a is a number from -(AgentViewAngleRadians/2) to AgentViewAngleRadians/2
@@ -125,7 +125,7 @@ func (s *Predator) Run(prey []*Prey, predators []*Predator) {
 	// read into second set of sensors (predators)
 	for i, _ := range predators {
 		if predators[i] != s {
-			if b, a := s.CanSee(predators[i]); b {
+			if b, a, _ := s.CanSee(predators[i]); b {
 				// map to correct sensor
 				//a is a number from -(AgentViewAngleRadians/2) to AgentViewAngleRadians/2
 				sliceIndex := int((a+HalfAgentViewAngleRadians)/RetinaSliceWidth) + NumRetinaSlices

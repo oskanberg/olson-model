@@ -21,7 +21,7 @@ type Agent interface {
 	GetLocation() *Vector2D
 	GetDirection() *Vector2D
 	SetRandomPosition(int, int)
-	CanSee(Agent) (bool, float64)
+	CanSee(Agent) (bool, float64, float64)
 	// simulate a single time step
 	Run([]*Prey, []*Predator)
 	// update to the new position
@@ -77,6 +77,7 @@ func NewPrey(genomeO []byte, mutate bool) *Prey {
 			Location:  Vector2D{0, 0},
 			Direction: Vector2D{1, 0},
 		},
+		nearbyPrey: 0,
 	}
 	if Model == "MarkovNetwork" {
 		newPrey.brain = DeserialiseGenomeMarkovNetwork(genome)

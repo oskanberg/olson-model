@@ -5,14 +5,14 @@ import "math"
 const SimulationSpaceSize = 1000
 
 const TotalSimulationSteps = 2000
-const TotalGenerations = 2000
-const RoundsPerGeneration = 3
+const TotalGenerations = 200
+const RoundsPerGeneration = 1
 
 const NumberOfPrey = 50
-const NumberOfPredators = 20
+const NumberOfPredators = 15
 
 const NumberOfPredatorClones = 1
-const NumberOfPreyClones = 25
+const NumberOfPreyClones = 100
 
 const MaximumOutNodes = 4
 const MaximumInNodes = 4
@@ -58,16 +58,21 @@ var RetinaSliceWidth = AgentViewAngleRadians / NumRetinaSlices
 const PredatorConfusion = true
 const EatCooldown = true
 
-const SavePredators = false
-const SeedPredators = true
+const SavePredators = true
+const SeedPredators = false
 
 const SavePrey = true
-const SeedPrey = true
+const SeedPrey = false
 
 const RigMarkovNetwork = false
-const Model = "LinearWeights"
 
-// const Model = "MarkovNetwork"
+// const Method = "Homogenous"
+const Method = "Hetrogenous"
+
+// const Model = "LinearWeights"
+
+const Model = "MarkovNetwork"
+
 // const Model = "Olson"
 
 const PreyHeadStart = 100

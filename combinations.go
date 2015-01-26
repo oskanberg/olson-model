@@ -25,7 +25,7 @@ func GenerateCombinations(alphabet []interface{}, length int) <-chan []interface
 
 	go func(c chan []interface{}) {
 		defer close(c)
-		emptySlice := make([]interface{}, 0)
+		emptySlice := make([]interface{}, 0, 0)
 		AddOption(c, emptySlice, alphabet, length)
 	}(c)
 
@@ -33,13 +33,19 @@ func GenerateCombinations(alphabet []interface{}, length int) <-chan []interface
 }
 
 func AddOption(c chan []interface{}, combo []interface{}, alphabet []interface{}, length int) {
-	if length <= 0 {
-		c <- combo
+	if length == 0 {
+		ret := make([]interface{}, len(combo))
+		copy(ret, combo)
+		c <- ret
 		return
 	}
+
 	var newCombo []interface{}
 	for _, ch := range alphabet {
-		newCombo = append(combo, ch)
+		// make sure to avoid cross-contamination
+		newCombo = make([]interface{}, len(combo)+1)
+		copy(newCombo, combo)
+		newCombo[len(combo)] = ch
 		AddOption(c, newCombo, alphabet, length-1)
 	}
 }
